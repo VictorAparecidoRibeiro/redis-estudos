@@ -1,0 +1,17 @@
+# PERSIST 
+
+
+#PERSIST: Remove o TTL de uma chave, tornando-a permanente.
+
+DEL session:user54321
+SET session:user54321 "54321"
+GET session:user54321
+
+EXPIRE session:user54321 60
+TTL session:user54321
+
+PERSIST session:user54321
+TTL session:user54321
+
+SET session:user543210 "54321"
+TTL session:user543210

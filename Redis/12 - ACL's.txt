@@ -1,0 +1,213 @@
+== SEGURANÇA NO REDIS 
+
+Comandos Básicos de ACL
+
+Os principais comandos relacionados a ACL's no Redis  são:
+
+- ACL SETUSER: Cria ou modifica em usuários 
+- ACL DELUSER: Remove um usuário
+- ACL LIST: Lista todos os uurários e suas permissões
+- ACL SAVE: Salva as configurações de ACL no disco 
+- ACL LOG: Exibe o log de eventos de segurança relacionados a ACL 
+- ACL WHOAMI: Retorna o nome do usuário atual.
+
+# flushall
+
+Criando e gerenciando Usuários com ACL's 
+
+Criando um usuário 
+
+Para criar um usuário com permissões específicas, use o comando ACL SETUSER.
+
+Exemplo:
+
+ACL SETUSER bruce on >password ~* +@all
+clear
+ACL LIST 
+
+Neste exemplo, estamos criando um usuário chamado bruce: on: Habilita o usuário 
+
+>password - Define a senha do usuario 
+
+~* - Permite acesso a todas as chaves 
+
++@all - concede permissão para todos os comandos 
+
+Restringindo Permissões 
+
+Podemos criar um usuário com permissões mais restritas.
+
+Exemplo:
+
+ACL SETUSER bob on > securepassword ~cache:* +get +set 
+clear 
+ACL LIST 
+
+Neste exemplo, o usuário bob tem as seguintes permissões: 
+
+- Acesso apenas a chaves que começam com chache 
+- Permissão para executar apenas os comandos GET e SET 
+
+Listando Usuários e Permissões 
+
+Para listar todos os uusários e suas permissões, use o comando ACL LIST 
+
+Exemplo
+
+clear 
+ACL LIST 
+
+Removendo um usuário 
+
+Para remover um usuário use o comando ACL DELUSER 
+
+ACL DELUSER bruce 
+clear 
+ACL LIST 
+
+=== Configurando ACL's para diferentes cenários Reais 
+
+Cenário 1: Criar um usuário que só pode executar comandos de leitura, como GET.
+
+ACL SETUSER readonly on >readonlypassword ~* +get 
+clear 
+ACL LIST 
+
+=== Cenário 2: Criar um usuário que só pode executar comandos de escrita, como SET.
+
+ACL SETUSER writeonly on >writeonlypassword ~* +set 
+clear 
+ACL LIST 
+
+
+=== Cenário 3: Usuário com acesso restrito a Comandos e Chaves específicos 
+
+ACL SET USER restrited on > restritedpassword ~data:* +get +set 
+ACL LIST 
+
+=== Exemplo completo de ACL 
+
+
+# Limpar as configurações para realizar o teste 
+
+vi /opt/homebrew/etc/redis.conf 
+
+# Producar e remover linha 
+
+aclfile /opt/homebrew/etc/users.acl 
+
+# Remover arquivo com ACL's 
+
+rm /opt/homebrew/etc/users.acl 
+
+# Reiniciar serviçõs e fazer login para testar se serviço está funcionando ok 
+
+brew services stop redis 
+brew services start redis 
+redis-cli 
+ping 
+exit 
+
+# Vamos considerar um cenário onde temos diferentes tipos de usuários com diferentes permissões.
+
+# Passo 1: Configuração Inicial no redis.conf adicione a linha para especificar o arquivo de ACL's 
+
+# Atualizar CONFS no Redis 
+vi /opt/homebrew/etc/redis.conf 
+
+# Procurar no arquivo de confs a linha comentada e ajustar pro seu path:
+aclfile /etc/redis/users.acl 
+
+# Atualizar o Path de acordo com a sua instalação
+
+aclfile /opt/homebrew/etc/redis/users.acl 
+
+# OBS:
+# Ex de path no linux:
+# aclfile /etc/redis/users.acl
+
+# Passo 2: Criação de Arquivo users.acl 
+# Crie e edite o arquivo o arquvio de ACL com o seguinte conteúdo.
+
+vi /opt/homebrew/etc/redis/users.acl 
+
+user default on nopass ~* +@all 
+user ze on >password ~* +@all 
+user chico on >securepassword ~cache:* +get +set 
+user appleitura on >readonlypassword ~* +get 
+uset appescrita on >writeonlypassword ~* +set 
+usar apprestrito on >restritedpassword ~data:* +get +set 
+
+# Passo 3: Reinicie o redis para carregar as configurações do arquivo de acl 
+
+brew services stope redis 
+brew services start redis
+
+# Passo 4: Faça o Login usuando o usuário default e liste os usuários disponiveis(deverão
+ser listados os usuários presentes no arquivo de ACL criado )
+
+redis-cli
+clear
+ACL LIST 
+
+# Passo 5: Uma vez com a ACL configurada, testar criar novo usuário, salvar a ACL em disco 
+reiniciar o redis e logar com um usuário diferente 
+
+# Se tudo ocorrer bem, teremos a certeza que o redis está persistindo as informações no arquivo 
+de ACL e as informações ficarão a salvo msm que o redis reiniciar e limpar a memoria. 
+
+# Criar um novo usuário 
+
+ACL SETUSER appuser on >mypass ~app:* +get +set 
+
+# Salvar ACL 
+# Se tudo ocorrer bem não irá gerar erro 
+
+ACL SAVE 
+
+# Reiniciar o redis 
+
+exit 
+brew services stop redis
+brew services start redis
+
+# Passo 6: Fazer o Login usando o usuário recém criado e usuário da ACL 
+
+redis-cli -h localhost -p 6379 --user appuser --pass 'mypass'
+
+# Veja se gera um erro de permissão:
+# (error) NOPERM No Permissions to acess a key 
+
+set user:12345 newinfo 
+
+# Testar com uma chave que dá acesso: 
+
+set app:12345 newinfo 
+get app:12345
+
+exit 
+
+# Outra forma de autenticar com os novos usuários se ja estiver conectado no console 
+
+auth appleitura 'readonlypassword'
+
+# Vai funcionar 
+
+get app:12345 
+
+# Vai gerar erro, pois o usuário não possui permissão de escrita 
+
+set app:54321 newinfo54321 
+
+# PARA SALVAR AS SENHAS DE FORMA SEGURA USE "SHA-256"
+
+# Use formato : #<hash> para especificar a senha 
+# Hash deve ser substituido pelo hash SHA-256 da senha 
+# Este valor de hash será comparado ao hash da senha inserida para um usuário da ACL 
+
+# Isso permite que os usuários armazenem hashes no arquivo da ACL ao invés de armazenar senhas em texto simples 
+# Apenas valores de hash-256 são aceitos : o hash da senha deve ter 64 caracteres e conter apenas 
+# hexadecimais minusculos 
+
+vi /opt/homebrew/etc/redis.acl 
+user ze on >password ~* +@all

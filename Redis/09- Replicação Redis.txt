@@ -1,0 +1,144 @@
+# Chegar Path do Arquivo de Configuração do Redis
+# config_file:/opt/homebrew/etc/redis.conf 
+
+redis-cli INFO 
+redis-cli INFO | grep config_file
+
+# REINICIR REDIS 
+
+brew services stop redis 
+
+# CRIAR PASTAS 
+
+cd ~/downloads
+mkdir redis-replication
+cd redis-replication
+mkdir master replica1 replica2
+ls -lrth
+
+# COPIAR ARQUIVOS DE CONFIGURAÇÃO 
+
+cp /opt/homebrew/etc/redis.conf /Users/user/Downloads/redis-replication/master/redis-master.conf
+
+cp /opt/homebrew/etc/redis.conf /Users/user/Downloads/redis-replication/replica1/redis-replica1.conf
+
+cp /opt/homebrew/etc/redis.conf /Users/user/Downloads/redis-replication/replica2/redis-replica2.conf
+
+# DATA DIRECTORY 
+
+mkdir /opt/homebrew/var/db/redis-master
+
+mkdir /opt/homebrew/var/db/redis-replica1
+
+mkdir /opt/homebrew/var/db/redis-replica2
+
+### AJUSTAR AS CONFIGURAÇÕES 
+
+# Master - Mudar apenas a porta (ou manter o padrão)
+# Replicas - Mudar a porta, data directory e logfile 
+
+# 6231 master 
+# 6232 slave
+# 6233 slave 
+
+# MASTER 
+
+vi /Users/user/Downloads/redis-replication/master/redis-master.conf
+
+port 6231
+dir /opt/homebrew/var/db/redis-master 
+logfile /Users/user/Downloads/redis-replication/master/redis-master.log
+
+# REPLICA1
+
+vi /Users/user/Downloads/redis-replication/replica1/redis-replica1.conf
+
+port 6232
+
+dir /opt/homebrew/var/db/redis-replica1 
+logfile /Users/user/Downloads/redis-replication/replica1/redis-replica1.log
+
+# REPLICA2
+
+vi /Users/user/Downloads/redis-replication/replica2/redis-replica2.conf 
+
+port 6233
+
+dir /opt/homebrew/var/db/redis-replica2
+logfile /Users/user/Downloads/redis-replication/replica2/redis-replica2.log
+
+### ABRIR TERMINAIS SEPARADOS 
+
+# Iniciar Servidor - Redis Master 
+
+redis-server /Users/user/Downloads/redis-replication/master/redis-master.conf 
+
+tail -f /Users/user/Downloads/redis-replication/master/redis-master.log 
+
+# Iniciar Servidor - Redis REPLICA1
+
+redis-server /Users/user/Downloads/redis-replication/replica1/redis-replica1.conf 
+
+tail -f /Users/user/Downloads/redis-replication/replica1/redis-replica1.log 
+
+# Iniciar Servidor - Redis REPLICA2 
+
+redis-server /Users/user/Downloads/redis-replication/replica2/redis-replica2.conf 
+
+tail -f /Users/user/Downloads/redis-replication/replica2/redis-replica2.log
+
+# CHEGAR INFORMAÇÕES DE REPLICAÇÂO NO MASTER 
+
+redis-cli -p 6231
+info replication 
+exit 
+
+# CONECTAR NA REPLICA1 E REPLICA2 E CONFIGURAR REPLICAÇÃO DOS MASTER 
+
+# REPLICA1
+
+redis-cli -p 6232
+replicaof 127.0.0.1 6231
+exit 
+
+# REPLICA2
+
+redis-cli -p 6233
+replicaof 127.0.0.1 6231
+
+# MOSTAR INFOS DAS REPLICAS LISTANDO AS OPÇÕES NO MASTER 
+
+# INSERIR CHAVE NO MASTER 
+
+redis-cli -p 6231
+INFO replication
+
+set usuario:123 bruce
+
+exit 
+
+# CHECAR NA REPLICA1 SE A CHAVE ESTA DISPONÍVEL 
+
+redis-cli -p 6232
+get usuario:123
+exit 
+
+# CHEGAR NA REPLICA2 se a chave está disponível 
+
+redis-cli -p 6233 
+get usuario:123 
+exit
+
+# ATUALIZAR CHAVE NO MASTER 
+redis-cli -p 6231
+set usuario:123 "bruce wayne"
+exit
+
+# OBS:
+# Por padrão, apenas é possível escrever no master e as réplicas são somente de leitura.
+# Se tentarmos escrever em uma réplica, ocorrerá um erro:
+# (error) READONLY You can't write against a read only replica. 
+
+redis-cli -p 6232
+set usuario:123 "Clark"
+exit

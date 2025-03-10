@@ -1,0 +1,281 @@
+## REDIS CLUSTER
+
+## Vamos inicializar algumas instâncias do redis e configurá-las para rodar o REDIS no CLUSTER MODE 
+
+
+## Segue um exemplo de configuração mínima para rodar o REDIS CLUSTER:
+
+# cluster-enabled: Rodar no CLUSTER MODE 
+
+# cluster-config-file: Define o nome do arquivo onde a configuração deste nó é armazenada, em caso
+de reinicialização do servidor.
+
+# cluster-node-timeout: número de milissegundos que um nó deve ficar inacessivel para ser 
+considerado em estado de falha 
+
+# CRIAR PASTAS 
+
+cd 
+mkdir ~/Downloads/redis-cluster 
+cd ~/Downloads/redis-cluster
+
+# CRIAR PRIMEIRO ARQUIVO redis.conf 
+
+vi redis-cluster-original.conf 
+
+port 7001
+cluster-enabled yes
+cluster-config-file nodes.conf 
+cluster-node-timeout 5000
+appendonly yes
+
+
+# Criar 3 "PRIMARY SHARDS" e 3 Réplicas (1 P/ CADA PRIMARY)
+
+# AO FINAL, TEREMOS 6 INSTÂNCIAS DO REDIS (3 PRIMARY /3 RÉPLICAS)
+# OBS: EM PRODUÇÃO, SEMPRE USE 2 RÉPLICAS P/ CADA PRIMARY, PARA SE PROTEGER CONTRA O "SLIPT BRAIN"
+
+# CRIAR 6 DIRETORIOS PARA CADA ARQUIVO DE CONFIGURAÇÃO E COPIAR O ARQUIVO DE CONFIGURAÇÃO PARA CADA PASTA 
+
+clear 
+cd ~/Downloads/redis-cluster
+mkdir -p {7001..7006}
+ls -l
+for i in {7001..7006}; do cp ~/Downloads/redis-cluster/redis-cluster-original.conf $i/redis.conf; done 
+for i in {7001..7006}; do print $i; ls =l $i; done
+
+
+### MUDAR A PORTA EM CADA UM DOS ARQUIVOS DE CONFIGURAÇÃO 
+
+clear 
+vi ~/Downloads/redis-cluster/7001/redis.conf
+vi ~/Downloads/redis-cluster/7002/redis.conf
+vi ~/Downloads/redis-cluster/7003/redis.conf
+vi ~/Downloads/redis-cluster/7004/redis.conf
+vi ~/Downloads/redis-cluster/7005/redis.conf
+vi ~/Downloads/redis-cluster/7006/redis.conf 
+
+## CHECAR SE OS ARQUIVOS FORAM MODIFICADOS CORRETAMENTE 
+
+clear 
+for i in {7001..7006}; do print ~/Downloads/redis-cluster/$i/redis.conf;
+cat ~/Downloads/redis-cluster/$i/redis.conf; done 
+
+## INICIALIZAR OS 6 SERVIDORES (1 EM CADA ABA)
+
+# TAB 1
+
+cd ~/Downloads/redis-cluster/7001
+redis-server redis.conf
+
+# TAB 2
+
+cd ~/Downloads/redis-cluster/7002
+redis-server redis.conf
+
+# TAB 3
+
+cd ~/Downloads/redis-cluster/7003
+redis-server redis.conf
+
+# TAB 4
+
+cd ~/Downloads/redis-cluster/7004
+redis-server redis.conf
+
+# TAB 5
+
+cd ~/Downloads/redis-cluster/7005
+redis-server redis.conf
+
+# TAB 6
+
+cd ~/Downloads/redis-cluster/7006
+redis-server redis.conf
+
+
+## COM AS 6 INSTÂNCIAS, VAMOS INICIALIZÁLAS EM UM CLUSTER 
+
+# O redis-cli vai propor uma configuração; aceite-a digitando yes 
+
+# O cluster será configurado e as instâncias serão inicializadas para se comunicar 
+umas com as outras. 
+
+# --cluster-replicas: Informa quantas REPLICAS cada PRIMARY vai ter 
+
+# Você deve ver a seguinte mensagem no final:
+# [OK] ALL 16384 slots covered 
+
+redis-cli \
+--cluster create \
+127.0.0.1:7001 \
+127.0.0.1:7002 \
+127.0.0.1:7003 \
+127.0.0.1:7004 \
+127.0.0.1:7005 \
+127.0.0.1:7006 \
+--cluster-replicas 1
+
+
+## CHECAR  AS CONFIGURAÇÕES DO CLUSTER 
+
+# Vverificar o estado do cluster, use o comando: 
+
+clear 
+redis-cli -p 7001 cluster info 
+
+# Listar os nós e suas funções 
+
+clear 
+redis-cli -p 7001 cluster nodes 
+
+# Checar a distribuição dos hashsslots 
+
+redis-cli -p 7001 cluster slots
+
+## ADICIONAR UM NOVO "SHARD" NO CLUSTER 
+
+# ESSA É UMA FORMA DE ESCALAR O CLUSTER NO REDIS: 
+# ARQUITETURA PARA ADICIONAR NOVOS SERVIDORES PROMARY E REPLICAS 
+
+# INICIAR 2 NOVAS INSTÂNCIAS REDIS: NOVO PRIMARY E SUA REPLICA 
+
+
+# CRIAR AS PASTAS 
+# COPIAR OS NOVOS ARQUIVOS DE CONFIGURAÇÃO
+# AJUSTAR A CONFIGURAÇÃO DA PORTA E MCADA ARQUIVO (7006 E 7007)
+
+clear 
+
+cd ~/Downloads/redis-cluster
+ls -l 
+
+mkdir 7007 7008
+
+cp 7001/redis.conf 7007/redis.conf
+ls 7007redis.conf
+
+cp 7001/redis.conf 7008/redis.conf 
+ls 7008/redis.conf
+
+# AJUSTAR A PORTA DOS @ NOVOS SERVERS 
+
+vi 7007/redis.conf
+vi 7008/redis.conf
+
+# CHECAR SE AS PORTAS ESTÃO CONFIGURADAS CORRETAMENTE 
+
+clear 
+cat 7007/redis.conf 
+
+clear 
+cat 7008/redis.conf 
+
+# NO CASO DA REPLICA, PRECISAMOS ESPECIFICAR ALGUNS PARAMETROS EXTRAS:
+
+# - O SERVIDOR REPLICA QUE SERÁ ACRESCENTADO NO CLUSTER 
+
+# - QUAL SHARED PRIMARY QUE SERÁ USADO PELA REPLICA PARA REPLICAR OS DAODS 
+
+# (SE NAO ESPECIFICARMOS, O REDIS VAI ATRIBUIR UM SERVIDOR PRIMARY ARBITRÁRIO)
+
+
+# ATENÇÃO !!!
+# CHECAR OS IDS DOS SHARDS E TOMAR NOTA DO ID SHARD QUE ESTA RODANDO NA PORTA 7007
+# POIS É O NOVO SHARD/PRIMARY QUE ADICIONAMOS E QUE SERÁ UTILIZADO PELA REPLICA PARA REPLICAR 
+OS DADOS 
+
+clear 
+redis-cli -p 7001 cluster nodes 
+
+# ADICIONAR O NOVO SERVER REPLICA: 
+
+# --cluster add-node 
+# Informa qual nó será adicionado no cluster e informa um shard do cluster 
+
+# --cluster-slave:
+# Indica que o shard deve participar do cluster como uma réplica 
+
+# --cluster-master-id:
+# Especifica qual PRIMARY SHARD a réplica deve replicar 
+
+# ATENÇÃO:
+# AJUSTAR O ID PARA QUE NOSSA REPLICA (7008) POSSA APONTAR P/ O MASTER ID CORRETO 
+(7997 NESTE NOSSO EXEMPLO) 
+
+clear 
+redis-cli -p 7001\
+--cluster add-node 127.0.0.1:7008 127.0.0.1:7001 \
+--cluster-slave --cluster-master-id 
+cdf3dd240994740d51e0399b048607d54aabceab
+
+# OBS:
+# SE TENTAR ADICIONAR UM NÓ QUE JÁ TEM SIDO INICIALIZADO VAI APRESENTAR UM ERRO:
+# [ERR] Node 127.0.0.1:7007 is not empty. Either the node already knows nodes 
+(check with CLUSTER NODES) or contains some key in data base 0.
+
+## FAZER O RESHARD PARA QUE O NOVO PRIMARY SERVER POSSA RECEBER OS HASHSSLOTS
+
+# INFORMAR A QUANTIDADE DE SLOTS A MOVER:
+# COMO SÃO 4 PRIMARY, DIVIDIR 16384/4 = 4096
+
+# INFORMAR O ID DO SHARD PRIMARIO PARA ONDE QUEREMOS MOVER OS DADOS 
+
+# INFORMAR O ID DO SHARD DE ONDE QUEREMOS COPIAR OS DADOS (INFORMAR "ALL" E O REDIS VAI 
+MOVER ALGUNS HASHSLOTS DE TODOS OS PRIMARY DISPONIVEIS)
+
+clear 
+redis-cli -p 7001 --cluster reshard 127.0.0.1:7001
+# 4096
+# USAR O MESMO ID DA INSTANCIA 7001 QUE ANOTAMOS ANTERIORMENTE 
+(EX: cdf3dd240994740d51e0399b048607d54aabceab)
+
+## CHECAR A DISTRIBUIÇÃO DOS HASHSLOTES APOS A REDISTRIBUIÇÃO
+
+clear 
+redis-cli -p 7001 cluster slots 
+
+## 	Quando você usa o redis-cli para se conectar a um shard de um Redis Cluster, você é
+conectado somente a esse shard e não pode acessar dados de outros shards.
+
+## Se você tentar acessar chaves do shard errado, você receberá um erro "MOVED".
+
+## Há um truque para usar o redis-cli para não ter que abrir conexões com todos os shards,
+mas em vez disso você deixa que ele faça o trabalho de conectar e reconectar pra você.
+
+# É o modo de suporte de cluster do redis-cli, usando -c:
+
+# Com isso, quando usarmos o REDIS no modo CLUSTER, se o cliente receber uma resposta de 
+erro "MOVED 15496 127;0;0;1?7002" do shard ao qual está conectado, ele simplesmente se 
+reconectará ao endereço retornando na resposta de erro, neste caso "127.0.0.1:7002"
+
+## TESTAR CONEXÃO: SEM HABILITAR O MODO CLUSTER 
+
+redis-cli -p 7001
+
+get usuario:1234 
+# (error) MOVED 5859 127.0.0.1:7007
+
+get pagamento:456
+
+# (error) MOVED 15443 127.0.0.1:7003
+
+get produto:789
+
+# (error) MOVED 13778 127.0.0.1:7003
+
+## TESTAR CONEXÃO HABILITANDO O MODO CLUSTER 
+
+redis-cli -p 7001 -c 
+
+get usuario:123
+# -> Redirected to slot (12893) located at 127.0.0.1:7003
+# (nill)
+
+get pagamento:456
+# -> Redirected to slot (15443) located at 127.0.0.1:7003
+# (nill)
+
+get produto:789
+# -> Redirected to slot (12893) located at 127.0.0.1:7003
+# (nill)

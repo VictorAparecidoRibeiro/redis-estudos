@@ -1,0 +1,90 @@
+== Usando o Recurso Publisher/Subscriber (PUB/SUB) do REDIS
+
+# Comandos principais do PUB/SUB
+
+- PUBLISH: Envia uma mensagem para o canal.
+
+- SUBSCRIBE: Inscreve o cliente em um ou mais canais.
+
+- UNSUBSCRIBE: Cancela a inscrição do cliente em um ou mais canais.
+
+- PSUBSCRIBE: Inscrever o cliente em um ou mais padrões de canais.
+
+- PUNSUBISCRIBE: Cancela a inscrição do cliente em um ou mais padrões de canais.
+
+- PUBSUB: Exibe informações sobre o sistema Pub/Sub
+
+== Exemplo Prático: Sistema de Notificação em tempo real
+
+Vamos criar um exemplo prático de um sistema de notificação em tempo real usando o Pub/Sub do Redis.
+Imagine que temos um sistema de gerenciamento de tarefas onde os usuários precisam ser notiifcados
+em tempo real sobre mudanças nas tarefas.
+
+Passo 1: Configuração do Ambiente
+Para esse exemplo, utilizaremos duas sessões de cliente Redis: uma para publicar e outra para 
+o assinante.
+
+Passo 2: Implementação do Subscriber 
+Primeiro, vamos configurar o assinante para ouvir notificações em um canal chamado task_updates.
+
+Subscriber 1:
+
+redis-cli 
+SUBSCRIBE task_updates
+
+Passo 3: Implementação do publicador 
+Em seguida, vamos configurar o publicador para enviar mensagens para o canal task_updates sempre
+que houver uma atualização de tarefa.
+
+Publisher 1:
+redis-cli
+
+PUBLISH task_updates "Tarefa 123 foi atualizada."
+PUBLISH task_updates "Tarefa 456 foi atualizada."
+
+== Exemplo Prático: Sistema de Chat em tempo real 
+
+Vamos agora criar um exemplo de um sistema de chat em tempo real, onde os usuários podem enviar 
+e receber mensagens instantaneamente.
+
+Passo 1: Configuração do Ambiente 
+Para este exemplo, utilizaremos três sessões de cliente Redis: uma para o publisher e duas para 
+os Subscribers 
+
+Passo 2: Implementação dos Assinantes
+Primeiro, vamos configurar os assinantes para ouvir mensagens em um canal chamado chat_room.
+
+Subscriber 1:
+
+redis-cli
+SUBSCRIBE chat_room 
+
+Subscriber 2:
+
+redis-cli
+SUBSCRIBE chat_room 
+
+Publisher:
+
+redis-cli
+PUBLISH chat_room "Olá a todos! Bem-vindos ao chat."
+PUBLISH chat_room "Bye Bye"
+
+Ambos os assinantes receberão as mensagens 
+
+== Monitorando e Gerenciando Pub/Sub
+
+O comando PUBSUB fornece informações úteis sobre o sistema Pub/Sub, incluindo o número de 
+assinantes em um canal e os padrões de canais. 
+
+Exemplo:
+
+redis-cli
+pubsub channels
+
+Exemplo:
+
+redis-cli
+pubsub numsub task_updates 
+pubsub numsub chat_room
+

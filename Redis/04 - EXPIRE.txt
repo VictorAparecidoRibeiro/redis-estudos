@@ -1,0 +1,34 @@
+# EXPIRE 
+
+# Além do expire, você pode usr o comando TTL para verificar quanto tempo resta antes que uma 
+chave expire:
+
+
+# Parametros
+
+NX - SET expiry only when the key has no expiry
+XX - SET expiry only when the key has a existing expiry
+GT - SET expiry only when the new expiry is greater than current one
+LT - SET expiry only when the new expiry is less than current one 
+
+
+# Insere uma chave e chega o TTL (a chave ainda não tem um TTL neste caso)
+
+set key10 "Infos Dat 01"
+get key10 
+TTL key10
+
+# Seta a expiração apenas quando já existe um TTL(não é o caso dessa chave, pois ela ainda não tem TTL 
+então não vai setar o TTL)
+
+EXPIRE key10 10 xx
+TTL key10
+
+# Seta a expiração quando é para configurar o NOVO TTL (como a chave ainda não tinha TTL o comando vai setar um novo TTL)
+
+del key10
+set key10 "Infos Data 01"
+
+EXPIRE key10 45 NX 
+TTL key10
+DEL key10

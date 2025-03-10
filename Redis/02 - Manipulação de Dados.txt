@@ -1,0 +1,21 @@
+Manipulação de dados no redis usando python
+
+Para manipular dados no Redis utilziando Python, você pode usar a biblioteca redis-py, que fornece
+uma interface amigável para interagir com o Redis.
+
+Veja aqui os exemplos de como manipular dados nos principais tipos de dados do Redis: hash, list, set
+e ordered set (sorted set), abordando exemplos práticos para cada um.
+
+Este código demonstra como usar cada um dos tipos de dados no Redis, com exemplos práticos:
+
+- Hash: Armazenamento e recuperação de dados de um usuário.
+- List: Gerenciamento de uma lista de tarefas.
+- Set: Gerenciamento de um conjunto de tags.
+- Ordered Set (Sorted Set): Gerenciamento de uma tabela de classificação de jogadores.
+
+Cada exempl inclui operações básicas, como adiconar, recuperar, atualizar e remover. E também como algumas operações
+específicas para cada tipo de dado.
+
+#Lembre-se de instalar a biblioteca redis-py:
+#pip install redis 
+

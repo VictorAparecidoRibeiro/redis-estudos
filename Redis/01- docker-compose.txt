@@ -1,0 +1,27 @@
+INSTALAÇÃO REDIS - DOCKER
+
+#MOSTRAR DOCKER VAZIO (ELIMINAR IMAGENS SE TIVER ALGO RELACIONADO RODANDO)
+
+#Container para o Redis 
+docker run -d --name redis -p 6380:6379 redis 
+
+#Chegar se container está em execução
+docker ps
+
+#Acessar o Redis do Container a paartir do host externo 
+redis-cli -h localhost -p 6380
+ping
+exit 
+
+#Acessar o bash no container e acessar o redis internamente no container 
+docker exec -it redis /bin/bash 
+redis-cli ping 
+redis-cli INFO 
+redis-cli 
+exit #Sair do redis-cli
+exit #Sair do Container Shell
+
+#Acessar o redis no container usando REDIS INSIGHT
+
+#Parar Container 
+docker stop redis 

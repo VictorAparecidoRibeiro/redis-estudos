@@ -1,0 +1,115 @@
+# REDIS SENTINEL
+
+
+# CRIAR WORKING DIRECTORY
+
+mkdir /opt/homebrew/var/db/sentinel1
+mkdir /opt/homebrew/var/db/sentinel2
+mkdir /opt/homebrew/var/db/sentinel3
+
+# CRIAR PASTA PARA ARQUIVOS DE CONFIGURAÇÃO 
+
+mkdir /Users/user/Downloads/redis-replication/sentinel1
+mkdir /Users/user/Downloads/redis-replication/sentinel2
+mkdir /Users/user/Downloads/redis-replication/sentinel3
+
+# ARQUIVOS DE CONFIGURAÇÃO DO SENTINEL (sentinel.conf)
+
+#SENTINEL 1 - RODANDO NA PORTA 7231
+
+vi mkdir /Users/user/Downloads/redis-replication/sentinel1/sentinel1.conf
+
+port 7231
+sentinel monitor mymaster 127.0.0.1 6231 2
+sentinel down-after-milliseconds mymaster 5000
+sentinel failover-timeout mymaster 60000
+dir "opt/homebrew/var/db/sentinel1"
+
+SENTINEL 2 - RODANDO NA PORTA 7232
+
+vi mkdir /Users/user/Downloads/redis-replication/sentinel2/sentinel2.conf
+
+port 7232
+sentinel monitor mymaster 127.0.0.1 6231 2
+sentinel down-after-milliseconds mymaster 5000
+sentinel failover-timeout mymaster 60000
+dir "opt/homebrew/var/db/sentinel2"
+
+
+SENTINEL 3 - RODANDO NA PORTA 7233
+
+vi mkdir /Users/user/Downloads/redis-replication/sentinel3/sentinel3.conf
+
+port 7233
+sentinel monitor mymaster 127.0.0.1 6231 2
+sentinel down-after-milliseconds mymaster 5000
+sentinel failover-timeout mymaster 60000
+dir "opt/homebrew/var/db/sentinel3"
+
+# INICIALIZANDO SENTINELS 
+
+redis-sentinel /Users/user/Downloads/redis-replication/sentinel1/sentinel1.conf
+
+redis-sentinel /Users/user/Downloads/redis-replication/sentinel2/sentinel2.conf
+
+redis-sentinel /Users/user/Downloads/redis-replication/sentinel3/sentinel3.conf
+
+
+# APÓS INICIAR CADA SENTINEL, O ARQUIVO DE CONFIGURAÇÃO SERÁ ATUALIZADO DE ACORDO:
+
+# sentinel monitor mymaster 127.0.0.1 6231 2
+# sentinel known-replica mymaster 127.0.0.1 6232
+# sentinel known-replica mymaster 127.0.0.1 6233
+
+cat /Users/user/Downloads/redis-replication/sentinel1/sentinel1.conf
+cat /Users/user/Downloads/redis-replication/sentinel2/sentinel2.conf
+cat /Users/user/Downloads/redis-replication/sentinel3/sentinel3.conf
+
+# REALIZANDO UM FAILOVER 
+
+# PARA REALIZAR O FAILOVER VAMOS MANUALMENTE PARAR O SERVIDOR MASTER
+# COM ISSO A LEIÇÃO DE UM NOVO MASTER OCORRERÁ LOGO EM SEGUIDA (VER OS LOGS DO SENTINEL)
+
+redis-cli -p 6231
+SHUTDOWN
+exit
+
+
+# CHECAR OUTPUTS/LOGS DOS SENTINELS APÓS O FAILOVER
+
+# MASTER MUDOU DO REDIS 6231 PRO REDIS 6233
+# REPLICA 2 SE TORNOU O NOVO MASTER 
+# +switch-master mymaster 127.0.0.1 6231 127.0.0.1 6233 
+
+# SLAVES 6232/6231 (REPLICAS) APONTAM PARA O NOVO MASTER 6233
+
+# +slave slave 127.0.0.1 6232 127.0.0.1 6232 @ mymaster 127.0.0.1 6233
+# +slave slave 127.0.0.1 6231 127.0.0.1 6231 @ mymaster 127.0.0.1 6233 
+
+
+# TESTAR SE AGORA É POSSÍVEL ESCREVER NO NOVO MASTER 
+
+redis-cli -p 6233
+set newuser:123 "Clark"
+exit
+
+
+# CONECTAR EM UMA REPLICA
+# TENTAR INSERIR UMA CHAVE (VAI GERAR ERRO)
+# LER NOVA CHAVE INSERIDA P/ CONFIRMAR QUE A REPLICAÇÃO ESTÁ FUNCIONANDO
+
+redis-cli -p 6232
+set newuser:1234567 "Mark"
+get newuser12345
+exit
+
+# SE INICIARMOS NOVAMENTE O ANTIGO MASTER, ELE VAI AGORA SE TORNAR UMA REPLICA (DO NOVO MASTER)
+
+# INICIAR SERVIDOR REDIS MASTER 
+
+redis-server /Users/user/Downloads/master/redis-master.conf
+
+tail -f /Users/user/Downloads/redis-master/redis-master.log
+
+# +convert-to-slave slave 127.0.0.1:6231 127.0.0.1:6231 @ mymaster 127.0.0.1:6233
+
