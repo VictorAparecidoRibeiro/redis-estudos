@@ -1,2 +1,12 @@
-# redis-estudos
-redis-estudos
+# Estudos de redis
+- Instalação
+- Manipulação de dados
+- Redis Insight
+- Redis Cloud
+- Redis Storage
+- Redis TTL
+- Redis PUB/SUB
+- Replicação - Redis Sentinel e Redis Cluster
+- Segurança - ACL's
+- Observability - Grafana
+- Teste de carga
